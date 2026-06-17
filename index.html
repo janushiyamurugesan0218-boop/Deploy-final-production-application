@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Asset Telemetry Core</title>
+    <style>
+        :root {
+            --slate-base: #0f172a;
+            --slate-surface: #1e293b;
+            --neon-blue: #38bdf8;
+            --emerald-active: #10b981;
+            --amber-warn: #f59e0b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-muted: #334155;
+        }
+
+        body {
+            background-color: var(--slate-base);
+            color: var(--text-primary);
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.5;
+        }
+
+        .prod-navbar {
+            background-color: var(--slate-surface);
+            border-bottom: 1px solid var(--border-muted);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .prod-navbar h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--neon-blue);
+        }
+
+        .cluster-pill {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--emerald-active);
+            border: 1px solid var(--emerald-active);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .dashboard-grid {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+
+        .prod-panel {
+            background-color: var(--slate-surface);
+            border: 1px solid var(--border-muted);
+            border-radius: 12px;
+            padding: 1.75rem;
+        }
+
+        .prod-panel h2 {
+            margin-top: 0;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-muted);
+            padding-bottom: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-wrapper {
+            margin-bottom: 1.25rem;
+        }
+
+        .input-wrapper label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+
+        .input-wrapper input, .input-wrapper select {
+            width: 100%;
+            background-color: var(--slate-base);
+            border: 1px solid var(--border-muted);
+            color: var(--text-primary);
+            padding: 0.75rem;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+
+        .input-wrapper input:focus {
+            border-color: var(--neon-blue);
+            outline: none;
+        }
+
+        .submit-btn {
+            background-color: var(--neon-blue);
+            color: var(--slate-base);
+            font-weight: 700;
+            border: none;
+            width: 100%;
+            padding: 0.85rem;
+            border-radius: 6px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: opacity 0.2s;
+        }
+
+        .submit-btn:hover { opacity: 0.9; }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            background-color: var(--slate-base);
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 2px solid var(--border-muted);
+        }
+
+        .data-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-muted);
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-dot::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-active { color: var(--emerald-active); }
+        .status-active::before { background-color: var(--emerald-active); }
+        
+        .status-warn { color: var(--amber-warn); }
+        .status-warn::before { background-color: var(--amber-warn); }
+
+        .spinner {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="prod-navbar">
+        <h1>PROD // INSTANCE CONTROL SYSTEM</h1>
+        <div class="cluster-pill" id="healthIndicator">NODE STATUS: UNKNOWN</div>
+    </header>
+
+    <main class="dashboard-grid">
+        <section class="prod-panel">
+            <h2>Register Mission-Critical Asset</h2>
+            <form id="productionForm">
+                <div class="input-wrapper">
+                    <label for="partName">Component Nomenclature</label>
+                    <input type="text" id="partName" placeholder="e.g., Mainframe Array" required>
+                </div>
+                <div class="input-wrapper">
+                    <label for="serialNumber">Hardware Tracking Signature</label>
+                    <input type="text" id="serialNumber" placeholder="e.g., SIGMA-909" required>
+                </div>
+                <div class="input-wrapper">
+                    <label for="status">Operational Status Vector</label>
+                    <select id="status">
+                        <option value="Operational">Operational Vector [OK]</option>
+                        <option value="Maintenance Required">Maintenance Intervention Required</option>
+                    </select>
+                </div>
+                <button type="submit" class="submit-btn">Commit Hardware to Ledger</button>
+            </form>
+        </section>
+
+        <section class="prod-panel">
+            <h2>Active High-Availability Telemetry Grid</h2>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>System ID</th>
+                        <th>Component Label</th>
+                        <th>Serial Signature</th>
+                        <th>Last Isolation Event</th>
+                        <th>State Matrix</th>
+                    </tr>
+                </thead>
+                <tbody id="productionTableBody">
+                    </tbody>
+            </table>
+            <div id="tableLoader" class="spinner">Awaiting execution trace mapping...</div>
+        </section>
+    </main>
+
+    <script>
+        // Set your production port explicitly here
+        const PRODUCTION_API_GATEWAY = 'http://localhost:8080/api/v1';
+
+        // Check the API Node connection status
+        async function runSystemHealthVerification() {
+            const pill = document.getElementById('healthIndicator');
+            try {
+                const check = await fetch(`${PRODUCTION_API_GATEWAY}/health`);
+                if(check.ok) {
+                    pill.textContent = "CLUSTER INSTANCE: HEALTHY";
+                    pill.style.color = "var(--emerald-active)";
+                    pill.style.borderColor = "var(--emerald-active)";
+                }
+            } catch {
+                pill.textContent = "CLUSTER INSTANCE: DISCONNECTED";
+                pill.style.color = "red";
+                pill.style.borderColor = "red";
+            }
+        }
+
+        // Fetch array logs from production model context
+        async function renderTelemetryGrid() {
+            const tableBody = document.getElementById('productionTableBody');
+            const loader = document.getElementById('tableLoader');
+            loader.style.display = 'block';
+
+            try {
+                const response = await fetch(`${PRODUCTION_API_GATEWAY}/assets`);
+                const result = await response.json();
+
+                tableBody.innerHTML = '';
+                if(result.success && result.telemetry.length > 0) {
+                    result.telemetry.forEach(asset => {
+                        const isOk = asset.status === 'Operational';
+                        const statusClass = isOk ? 'status-active' : 'status-warn';
+                        
+                        const elementRow = `
+                            <tr>
+                                <td><code style="color: var(--neon-blue);">${asset.id}</code></td>
+                                <td><strong>${asset.partName}</strong></td>
+                                <td><code>${asset.serialNumber}</code></td>
+                                <td>${asset.lastMaintained}</td>
+                                <td><span class="status-dot ${statusClass}">${asset.status}</span></td>
+                            </tr>
+                        `;
+                        tableBody.insertAdjacentHTML('beforeend', elementRow);
+                    });
+                } else {
+                    tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Empty tracking matrix database block.</td></tr>`;
+                }
+            } catch (err) {
+                tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--amber-warn);">Failed downstream ledger compilation connection.</td></tr>`;
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        // Intercept form post requests safely
+        document.getElementById('productionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const packet = {
+                partName: document.getElementById('partName').value,
+                serialNumber: document.getElementById('serialNumber').value,
+                status: document.getElementById('status').value
+            };
+
+            try {
+                const commitRequest = await fetch(`${PRODUCTION_API_GATEWAY}/assets`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(packet)
+                });
+
+                if(commitRequest.ok) {
+                    document.getElementById('productionForm').reset();
+                    await renderTelemetryGrid();
+                } else {
+                    alert("System Exception Rejected Asset Package.");
+                }
+            } catch {
+                console.error("Critical Data Loss: Network pipe dropped payload transmission.");
+            }
+        });
+
+        // Loop monitoring cycles
+        window.addEventListener('DOMContentLoaded', () => {
+            runSystemHealthVerification();
+            renderTelemetryGrid();
+            // Polling telemetry state verification metrics every 15 seconds
+            setInterval(runSystemHealthVerification, 15000);
+        });
+    </script>
+</body>
+</html>
